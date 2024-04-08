@@ -98,7 +98,7 @@ mpirun --allow-run-as-root \
 -x PATH \
 -x NCCL_NET_GDR_READ=1 \
 -x UCX_IB_PCI_RELAXED_ORDERING=on \
-$ROOT/build/all_reduce_perf -b 128M -e 8G -f 2 -g 1
+$ROOT/build/all_reduce_perf -b 128M -e 2G -f 2 -g 1
 
 }
 
@@ -127,18 +127,18 @@ if [ "$RANK" -eq 0 ]; then
   nccl_tests
 
   # notfiy the worker machines that the task done
-  echo "Work Done" >> "${ROOT}/log/mpi/${job_id}/work_done.txt"
-  # echo "Work Done"
+  # echo "Work Done" >> "${ROOT}/log/mpi/${job_id}/work_done.txt"
+  echo "Work Done"
 
-#fi
-else
+fi
+# else
   while true; do
     sleep 100
     if [ -f "$ROOT/log/mpi/${job_id}/work_done.txt" ]; then
       break
     fi
   done
-fi
+# fi
 }
 
 main "$@"
