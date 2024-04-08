@@ -29,7 +29,7 @@ while true; do
   sleep 1
   all_worker_uploaded=true
   for i in $(seq 0 $((WORLD_SIZE - 1))); do
-    echo "visiting node#{i} ..."
+    echo "visiting node#${i} ..."
     if [ ! -f "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt" ] || [ ! -f "${ROOT}/log/mpi/${job_id}/ip.${i}.txt" ]; then
       all_worker_uploaded=false
       break
@@ -43,7 +43,7 @@ done
 
 # writing all workers RSA keys to local authorized_keys
 for i in $(seq 0 $((WORLD_SIZE - 1))); do
-  read -r key < "${ROOT}/log/mpi/${job_id}/rsa.${RANK}.txt"
+  read -r key < "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt"
   echo "${key}" >> "/root/.ssh/authorized_keys"
 done
 }
