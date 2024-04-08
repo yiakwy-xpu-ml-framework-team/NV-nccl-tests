@@ -2,15 +2,19 @@ ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 
 SSHD_PORT=$WORKER_SSH_PORT
 
+set -x
+# set -e
+
+job_id=nccl_tests
+
 mpi_setup() {
 
 if [ "$RANK" -eq 0  ] &&  [ -f "$ROOT/log/mpi/${job_id}/work_done.txt" ]; then
-  rm $ROOT/log/mpi/${job_id}/work_done.txt
-  rm $ROOT/log/mpi/${job_id}/mpi_hostfile
+  rm -r $ROOT/log/mpi/${job_id}
 fi
 
 # start ssh service
-nohup /usr/sbin/sshd -p $WOKER_SSH_PORT -D &
+nohup /usr/sbin/sshd -p $WORKER_SSH_PORT -D &
 
 
 # check
@@ -19,7 +23,6 @@ echo | ssh-keygen -P ''
 echo "sleep 3 seconds to wait for sshd completion ..."
 sleep 3
 
-job_id=nccl_tests
 mkdir -p "${ROOT}/log/mpi/${job_id}"
 
 this_ip=$(echo `hostname -i`)
@@ -27,22 +30,30 @@ echo "$this_ip" > "${ROOT}/log/mpi/${job_id}/ip.${RANK}.txt"
 
 # generate ssh key
 # TODO(yiakwy)  : add timestamp checking
-echo | ssh-keygen -P ''
 cat "/root/.ssh/id_rsa.pub" > "${ROOT}/log/mpi/${job_id}/rsa.${RANK}.txt"
 
 while true; do
   sleep 1
   all_worker_uploaded=true
   for i in $(seq 0 $((WORLD_SIZE - 1))); do
-    echo "visiting node#${i} ..."
-    if [ ! -f "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt" ] || [ ! -f "${ROOT}/log/mpi/${job_id}/ip.${i}.txt" ]; then
+    if [ ! -f "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt" ]; then
       all_worker_uploaded=false
-      echo "ip.$i.txt IS NOT uploaded."
+      echo "ip.$i.txt IS  NOT uploaded."
       break
     else
-      echo "ip.$i.txt uploaded."
+      echo "ip.$i.txt is  uploaded."
     fi
   done
+
+  for i in $(seq 0 $((WORLD_SIZE - 1))); do
+    if [ ! -f "${ROOT}/log/mpi/${job_id}/ip.${i}.txt" ]; then
+      all_worker_uploaded=false
+      echo "rsa.${i}.txt IS NOT uploaded."
+    else
+      echo "rsa.${i}.txt is uploaded."
+    fi
+  done
+
   # stop checking
   if [ "$all_worker_uploaded" = true ]; then
     break
@@ -63,7 +74,7 @@ mpirun --allow-run-as-root \
 --oversubscribe \
 -np 64 \
 -hostfile "${ROOT}/log/mpi/${job_id}/mpi_hostfile" \
--mca plm_rsh_args "-p 22 -q -o StrictHostKeyChecking=no" \
+-mca plm_rsh_args "-p ${SSHD_PORT} -q -o StrictHostKeyChecking=no" \
 -mca coll_hcoll_enable 0 \
 -mca pml ob1 \
 -mca btl ^openib \
@@ -117,7 +128,9 @@ if [ "$RANK" -eq 0 ]; then
 
   # notfiy the worker machines that the task done
   echo "Work Done" >> "${ROOT}/log/mpi/${job_id}/work_done.txt"
+  # echo "Work Done"
 
+#fi
 else
   while true; do
     sleep 100
