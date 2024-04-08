@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nccl-test-distributed-h100-8x8-worker
+spec:
+  selector:
+    matchLabels:
+      app: nccl-test-worker
+  replicas: 7
+  template:
+    metadata:
+      labels:
+        app: nccl-test-worker
+    spec:
+      containers:
+      - name : nccl-test-container
+        image : "registry2.ams.op-mobile.opera.com/kunlun/moe_base:test_h800"
+        env:
+        - name : MLP_WORKER_GPU
+          value : "8"
+        - name : WORLD_SIZE
+          value : "8"
+        - name : MASTER_ADDR
+          value : "nccl-test-distributed-h100-8x8-master-0"
+        - name : MASTER_PORT
+          value : "31000"
+        - name : WORKER_SSH_PORT
+          value : "31000"
+        command: ["/bin/bash"]
+        args: ["-c", "cd /data/users/yiakwy/WorkSpace/Github/nccl-tests/; export RANK=$((1+${HOSTNAME##*-})) ; /usr/bin/bash scripts/check_completion.sh"]
+        ports:
+          - name: port
+            containerPort: 31000
+            protocol: TCP
+        volumeMounts:
+          - mountPath: /data
+            name: distributed-fs-1024gi
+          - mountPath: /dev/shm
+            name: dshm
+        resources:
+          limits:
+            nvidia.com/gpu: "8"
+      volumes:
+        - name: distributed-fs-1024gi
+          persistentVolumeClaim:
+            claimName: distributed-fs-1024gi
+            readOnly: false
+        - name: dshm
+          emptyDir:
+            medium: Memory
