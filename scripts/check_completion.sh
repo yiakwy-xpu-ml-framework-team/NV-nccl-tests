@@ -4,6 +4,11 @@ SSHD_PORT=$WORKER_SSH_PORT
 
 mpi_setup() {
 
+if [ "$RANK" -eq 0  ] &&  [ -f "$ROOT/log/mpi/${job_id}/work_done.txt" ]; then
+  rm $ROOT/log/mpi/${job_id}/work_done.txt
+  rm $ROOT/log/mpi/${job_id}/mpi_hostfile
+fi
+
 # start ssh service
 nohup /usr/sbin/sshd -p $WOKER_SSH_PORT -D &
 
@@ -32,7 +37,10 @@ while true; do
     echo "visiting node#${i} ..."
     if [ ! -f "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt" ] || [ ! -f "${ROOT}/log/mpi/${job_id}/ip.${i}.txt" ]; then
       all_worker_uploaded=false
+      echo "ip.$i.txt IS NOT uploaded."
       break
+    else
+      echo "ip.$i.txt uploaded."
     fi
   done
   # stop checking
@@ -46,6 +54,7 @@ for i in $(seq 0 $((WORLD_SIZE - 1))); do
   read -r key < "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt"
   echo "${key}" >> "/root/.ssh/authorized_keys"
 done
+
 }
 
 nccl_tests() {
@@ -86,6 +95,8 @@ $ROOT/build/all_reduce_perf -b 128M -e 8G -f 2 -g 1
 main() {
 
   mpi_setup "$@"
+  
+  echo "mpi setup completes."
 
 if [ "$RANK" -eq 0 ]; then
 
@@ -94,9 +105,12 @@ if [ "$RANK" -eq 0 ]; then
   for i in $(seq 0 $((WORLD_SIZE - 1))); do
     read -r ip < "$ROOT/log/mpi/${job_id}/ip.${i}.txt"
     echo "${ip} slots=${MLP_WORKER_GPU}" >> "${ROOT}/log/mpi/${job_id}/mpi_hostfile"
+    echo "ssh ${ip}:${SSHD_PORT}..."
     ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -p ${SSHD_PORT} ${ip} hostname
+    echo "ssh ${ip}:${SSHD_PORT} successfully."
   done
 
+  sleep 20
 
   # execute mpi cmd
   nccl_tests
@@ -111,7 +125,6 @@ else
       break
     fi
   done
-
 fi
 }
 
