@@ -23,7 +23,7 @@ echo "$this_ip" > "${ROOT}/log/mpi/${job_id}/ip.${RANK}.txt"
 # generate ssh key
 # TODO(yiakwy)  : add timestamp checking
 echo | ssh-keygen -P ''
-cat "/root/.ssh/id_rsa.pub" > "${ROOT}/mpi/log/${job_id}/rsa.${RANK}.txt"
+cat "/root/.ssh/id_rsa.pub" > "${ROOT}/log/mpi/${job_id}/rsa.${RANK}.txt"
 
 while true; do
   sleep 1
