@@ -11,7 +11,7 @@ nohup /usr/sbin/sshd -p $WOKER_SSH_PORT -D &
 # check
 echo | ssh-keygen -P ''
 
-echo "sleep 3 seconds to wait for sshd complete starting ..."
+echo "sleep 3 seconds to wait for sshd completion ..."
 sleep 3
 
 job_id=nccl_tests
@@ -29,7 +29,8 @@ while true; do
   sleep 1
   all_worker_uploaded=true
   for i in $(seq 0 $((WORLD_SIZE - 1))); do
-    if [ ! -f "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt" ] || [ -f "${ROOT}/log/mpi/${job_id}/ip.${i}.txt" ]; then
+    echo "visiting node#{i} ..."
+    if [ ! -f "${ROOT}/log/mpi/${job_id}/rsa.${i}.txt" ] || [ ! -f "${ROOT}/log/mpi/${job_id}/ip.${i}.txt" ]; then
       all_worker_uploaded=false
       break
     fi
