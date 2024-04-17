@@ -9,7 +9,7 @@ job_id=nccl_tests
 
 mpi_setup() {
 
-if [ "$RANK" -eq 0  ] &&  [ -f "$ROOT/log/mpi/${job_id}/work_done.txt" ]; then
+if [ "$RANK" -eq 0 ] ; then
   rm -r $ROOT/log/mpi/${job_id}
 fi
 
@@ -26,6 +26,7 @@ sleep 3
 mkdir -p "${ROOT}/log/mpi/${job_id}"
 
 this_ip=$(echo `hostname -i`)
+# this_ip=$(echo `hostname`)
 echo "$this_ip" > "${ROOT}/log/mpi/${job_id}/ip.${RANK}.txt"
 
 # generate ssh key
@@ -70,6 +71,7 @@ done
 
 nccl_tests() {
 
+# NOTE(yiakwy) :  H100 upto 16GB memory can used for mpi testing
 mpirun --allow-run-as-root \
 --oversubscribe \
 -np 64 \
@@ -93,12 +95,15 @@ mpirun --allow-run-as-root \
 -x CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
 -x CUDA_DEVICE_ORDER=PCI_BUS_ID \
 -x NCCL_DEBUG=DEBUG \
+-x NCCL_COLLNET_ENABLE=0 \
+-x NCCL_IB_QPS_PER_CONNECTION=2 \
+-x NCCL_IB_SPLIT_DATA_ON_QPS=0 \
 -x NCCL_ALGO=Ring \
 -x LD_LIBRARY_PATH \
 -x PATH \
 -x NCCL_NET_GDR_READ=1 \
 -x UCX_IB_PCI_RELAXED_ORDERING=on \
-$ROOT/build/all_reduce_perf -b 128M -e 2G -f 2 -g 1
+$ROOT/build/all_reduce_perf -b 128M -e 16G -f 2 -g 1 -w 5 -n 20 &> "$ROOT/log/mpi/${job_id}/output_$RANK.log"
 
 }
 

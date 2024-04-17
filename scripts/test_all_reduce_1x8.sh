@@ -1,3 +1,5 @@
+ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
 export NCCL_IB_HCA=mlx5
 export NCCL_IB_TC=136
 export NCCL_IB_SL=5
@@ -11,4 +13,5 @@ export UCX_NET_DEVICES=ibp0:1,ibp1:1,ibp2:1,ibp3:1,ibp4:1,ibp5:1,ibp6:1,ibp7:1
 export SHARP_COLL_ENABLE_PCI_RELAXED_ORDERING=1
 export NCCL_COLLNET_ENABLE=0
 
-all_reduce_perf -b 512M -e 8G -f 2 -g 8
+# make MPI=1 MPI_HOME=/opt/hpcx/ompi
+$ROOT/build/all_reduce_perf -b 512M -e 8G -f 2 -g 1
